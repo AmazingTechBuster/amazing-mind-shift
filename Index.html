@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Amazing Mind Shift</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="app-container">
+
+    <header>
+        <h1>✨ <span class="animated-title">Amazing Mind Shift</span></h1>
+        <p>Reprogram Your Subconscious Mind</p>
+    </header>
+
+    <div class="streak-strip">
+        <div class="streak-item">
+            <div class="streak-num" id="streakCount">0</div>
+            <div class="streak-label">Day Streak 🔥</div>
+        </div>
+        <div class="streak-item">
+            <div class="streak-num" id="journalCount">0</div>
+            <div class="streak-label">Entries</div>
+        </div>
+        <div class="streak-item">
+            <div class="streak-num" id="manifestCount">0</div>
+            <div class="streak-label">Manifests</div>
+        </div>
+    </div>
+
+    <div id="timeVibeCard" class="vibe-card">
+        <div class="vibe-header">
+            <span class="vibe-icon-wrapper"><span id="vibeIcon">🌅</span></span>
+            <b id="vibeGreeting">Good Morning</b>
+        </div>
+        <p id="timeQuote">"Loading your positive thought..."</p>
+    </div>
+
+    <div class="thought-card">
+        <div class="thought-header">
+            <div class="bulb-icon">💡</div>
+            <h4>Thought of the Day</h4>
+        </div>
+        <p id="dailyThoughtText">"Loading..."</p>
+    </div>
+
+    <div class="mood-strip">
+        <div class="mood-title">Aaj ka mood kaisa hai? 🎯</div>
+        <div class="mood-buttons">
+            <button class="mood-btn" onclick="selectMood(this,'😊','Happy')" data-mood="Happy">😊<span class="label">Happy</span></button>
+            <button class="mood-btn" onclick="selectMood(this,'😤','Stressed')" data-mood="Stressed">😤<span class="label">Stressed</span></button>
+            <button class="mood-btn" onclick="selectMood(this,'😔','Sad')" data-mood="Sad">😔<span class="label">Sad</span></button>
+            <button class="mood-btn" onclick="selectMood(this,'😌','Calm')" data-mood="Calm">😌<span class="label">Calm</span></button>
+            <button class="mood-btn" onclick="selectMood(this,'🔥','Motivated')" data-mood="Motivated">🔥<span class="label">Motivated</span></button>
+        </div>
+    </div>
+
+    <div id="moodSuggestionCard" class="mood-suggestion-card" style="display:none">
+        <div class="mood-suggestion-header">
+            <span id="moodSuggEmoji" class="mood-sugg-emoji">😊</span>
+            <div>
+                <div class="mood-sugg-label">Aapke mood ke liye</div>
+                <div id="moodSuggTitle" class="mood-sugg-title">Geeta ki Baat</div>
+            </div>
+        </div>
+        <div class="mood-sugg-shlok" id="moodSuggShlok"></div>
+        <div class="mood-sugg-meaning" id="moodSuggMeaning"></div>
+        <div class="mood-sugg-quote" id="moodSuggQuote"></div>
+        <div class="mood-sugg-tip" id="moodSuggTip"></div>
+    </div>
+
+    <div class="breathing-card">
+        <div class="breathing-title">⟳ 4-7-8 Breathing — Instant Calm</div>
+        <div class="breath-circle" id="breathCircle" onclick="startBreathing()">Start</div>
+        <p class="breath-instruction" id="breathInstruct">Tap the circle to begin a calming breath cycle</p>
+    </div>
+
+    <section id="tab-journal" class="card tab-content active-tab">
+        <h2 class="section-title"><span class="title-icon">🌅</span> Daily Gratitude Journal</h2>
+
+        <div class="journal-tips">
+            <p><strong>✨ Tip:</strong> Gratitude likh ke apna subconscious program karo. Sirf 2-3 cheezein kaafi hain.</p>
+        </div>
+
+        <div class="journal-section">
+            <label>🌄 Morning — Intention Set Karo</label>
+            <div class="journal-entry-wrapper">
+                <textarea id="morningJournal" placeholder="Aaj subah aap kis cheez ke liye shukraguzar hain? Kya intention set karna chahte hain?" oninput="updateWordCount(this,'wc-morning')"></textarea>
+            </div>
+            <div class="word-count" id="wc-morning">0 words</div>
+
+            <label>☀️ Afternoon — Pause & Reflect</label>
+            <div class="journal-entry-wrapper">
+                <textarea id="afternoonJournal" placeholder="Din ka best moment kya raha abhi tak? Kya kaam accha gaya?" oninput="updateWordCount(this,'wc-afternoon')"></textarea>
+            </div>
+            <div class="word-count" id="wc-afternoon">0 words</div>
+
+            <label>🌙 Evening — Let Go & Relax</label>
+            <div class="journal-entry-wrapper">
+                <textarea id="eveningJournal" placeholder="Aaj ki kaun si baat ne aapko khushi di? Kya release karna chahte hain?" oninput="updateWordCount(this,'wc-evening')"></textarea>
+            </div>
+            <div class="word-count" id="wc-evening">0 words</div>
+        </div>
+
+        <button class="save-btn" onclick="saveJournal()">💾 Save Today's Journal</button>
+        <div style="text-align:center; margin-top: 8px;">
+            <span class="save-indicator" id="saveIndicator">✅ Journal saved successfully!</span>
+        </div>
+    </section>
+
+    <section id="tab-wisdom" class="card tab-content">
+        <h2 class="section-title"><span class="title-icon">📚</span> Mindset Library</h2>
+        <p class="section-subtitle">Book icon tap karo aur core wisdom absorb karo:</p>
+
+        <div class="book-library-grid">
+            <div class="book-item" id="book-alone" onclick="showBookSummary('alone', this)">
+                <div class="book-icon-wrapper bg-soft-blue"><span class="book-icon">🧘</span></div>
+                <span class="book-title">The Art of Being Alone</span>
+            </div>
+            <div class="book-item" id="book-money" onclick="showBookSummary('money', this)">
+                <div class="book-icon-wrapper bg-soft-green"><span class="book-icon">💰</span></div>
+                <span class="book-title">Psychology of Money</span>
+            </div>
+            <div class="book-item" id="book-subconscious" onclick="showBookSummary('subconscious', this)">
+                <div class="book-icon-wrapper bg-soft-purple"><span class="book-icon">🧠</span></div>
+                <span class="book-title">Power of Subconscious</span>
+            </div>
+            <div class="book-item" id="book-alchemist" onclick="showBookSummary('alchemist', this)">
+                <div class="book-icon-wrapper bg-soft-orange"><span class="book-icon">💎</span></div>
+                <span class="book-title">The Alchemist</span>
+            </div>
+        </div>
+
+        <div id="bookResult" class="book-insight-result">
+            <h4 id="bookHeading"></h4>
+            <p id="bookCoreLesson"></p>
+            <ul id="bookTakeaways"></ul>
+        </div>
+
+        <h2 class="section-title" style="margin-top:24px"><span class="title-icon">💡</span> Geeta Wisdom (50 Emotions)</h2>
+        <label for="emotionSelect">Aap abhi kaisa mehsoos kar rahe hain?</label>
+        <div class="select-wrapper">
+            <select id="emotionSelect" onchange="showGeetaQuote()">
+                <option value="none">Select Emotion...</option>
+                <option value="anxiety">Anxiety / Overthinking</option>
+                <option value="anger">Anger / Frustration</option>
+                <option value="sadness">Sadness / Depression</option>
+                <option value="confusion">Confusion / Doubt</option>
+                <option value="fear">Fear / Insecurity</option>
+                <option value="greed">Greed / Attachment</option>
+                <option value="ego">Ego / Pride</option>
+                <option value="laziness">Laziness / Demotivation</option>
+                <option value="happiness">Happiness / Joy</option>
+                <option value="peace">Peace / Calmness</option>
+                <option value="selflove">Self-Love / Acceptance</option>
+                <option value="confidence">Confidence / Courage</option>
+                <option value="positivity">Positivity / Optimism</option>
+                <option value="jealousy">Jealousy / Envy</option>
+                <option value="guilt">Guilt / Regret</option>
+                <option value="loneliness">Loneliness / Isolation</option>
+                <option value="grief">Grief / Loss</option>
+                <option value="distraction">Distraction / Lack of Focus</option>
+                <option value="impatience">Impatience / Restlessness</option>
+                <option value="failure">Failure / Defeat</option>
+                <option value="success">Success / Arrogance</option>
+                <option value="betrayal">Betrayal / Heartbreak</option>
+                <option value="insult">Insult / Disrespect</option>
+                <option value="comparison">Comparison / Inadequacy</option>
+                <option value="overwhelm">Overwhelm / Burnout</option>
+                <option value="lust">Temptation / Lust</option>
+                <option value="unforgiving">Resentment / Unforgiving</option>
+                <option value="uncertainty">Uncertainty / Future Dread</option>
+                <option value="purposeless">Feeling Lost / Purposeless</option>
+                <option value="unappreciated">Unappreciated / Undervalued</option>
+                <option value="hate">Hate / Bitterness</option>
+                <option value="helplessness">Helplessness / Despair</option>
+                <option value="toxic_attachment">Toxic Relationships</option>
+                <option value="stubbornness">Stubbornness / Resistance</option>
+                <option value="complaining">Complaining / Ungrateful</option>
+                <option value="materialistic">Materialistic / Empty</option>
+                <option value="gossip">Gossip / Negativity</option>
+                <option value="judgemental">Judgemental / Critical</option>
+                <option value="revenge">Revenge / Vengeance</option>
+                <option value="fake">Hypocrisy / Pretending</option>
+                <option value="dependency">Dependency / Needy</option>
+                <option value="perfectionism">Perfectionism / Unrealistic</option>
+                <option value="boredom">Boredom / Apathy</option>
+                <option value="nervousness">Nervousness / Stage Fright</option>
+                <option value="bad_habits">Addiction / Bad Habits</option>
+                <option value="financial_stress">Financial Stress</option>
+                <option value="health_anxiety">Health Anxiety</option>
+                <option value="trust_issues">Trust Issues / Suspicion</option>
+                <option value="surrender">Surrender / Need Guidance</option>
+            </select>
+        </div>
+
+        <div id="geetaResult" class="insight-result">
+            <h4 id="shlokText"></h4>
+            <p id="meaningText"></p>
+            <i id="modernQuote"></i>
+        </div>
+    </section>
+
+    <section id="tab-smasher" class="card tab-content">
+        <h2 class="section-title"><span class="title-icon">💥</span> Stress Smasher</h2>
+        <p class="section-subtitle">Apni pareshani yahan likhein aur use tabah hote hue dekhein:</p>
+        <input type="text" id="stressInput" placeholder="Yahan apna stress likho...">
+        <div class="smash-particles" id="smashParticles"></div>
+        <button class="smash-btn" onclick="smashStress()">💥 SMASH IT!</button>
+        <div style="margin-top: 18px; text-align: center;">
+            <p style="font-size: 0.8rem; color: var(--muted);">Stress smash karne ke baad breathing exercise try karo 👆</p>
+        </div>
+    </section>
+
+    <section id="tab-manifest" class="card tab-content">
+        <h2 class="section-title"><span class="title-icon">🚀</span> Manifestation Methods</h2>
+        <p class="section-subtitle">Apna affirmation ek baar type karo, Add dabao — rows auto generate honge.</p>
+
+        <div class="manifest-card">
+            <div class="manifest-header">
+                <h3>🔄 333 Technique</h3>
+                <span class="counter-badge" id="count333">0 / 33</span>
+            </div>
+            <p class="manifest-desc">Apna affirmation 33 baar 3 consecutive days tak likho.</p>
+            <div class="manifest-input-group">
+                <input type="text" id="input333" placeholder="Core affirmation likho...">
+                <button onclick="addManifestEntry('333', 33)">Add</button>
+            </div>
+            <div id="list333" class="manifest-live-wall"></div>
+            <button class="clear-manifest-btn" onclick="clearManifest('333')">Reset Setup</button>
+        </div>
+
+        <div class="manifest-card">
+            <div class="manifest-header">
+                <h3>🔢 369 Method</h3>
+                <span class="counter-badge" id="count369">0 / 18</span>
+            </div>
+            <p class="manifest-desc">3x Morning, 6x Afternoon, 9x Night (Total 18 daily).</p>
+            <div class="manifest-input-group">
+                <input type="text" id="input369" placeholder="Affirmation yahan likho...">
+                <button onclick="addManifestEntry('369', 18)">Add</button>
+            </div>
+            <div id="list369" class="manifest-live-wall"></div>
+            <button class="clear-manifest-btn" onclick="clearManifest('369')">Reset Setup</button>
+        </div>
+
+        <div class="manifest-card">
+            <div class="manifest-header">
+                <h3>🔥 555 Formula</h3>
+                <span class="counter-badge" id="count555">0 / 55</span>
+            </div>
+            <p class="manifest-desc">Apna ultimate vision 55 baar 5 days tak likho.</p>
+            <div class="manifest-input-group">
+                <input type="text" id="input555" placeholder="Vision yahan likho...">
+                <button onclick="addManifestEntry('555', 55)">Add</button>
+            </div>
+            <div id="list555" class="manifest-live-wall"></div>
+            <button class="clear-manifest-btn" onclick="clearManifest('555')">Reset Setup</button>
+        </div>
+
+        <div id="manifestHistoryBox" class="history-box" style="display:none">
+            <h3>📜 Manifestation History</h3>
+            <div id="historyLogList"></div>
+        </div>
+    </section>
+
+    <section id="tab-community" class="card tab-content">
+        <h2 class="section-title"><span class="title-icon">🌟</span> Community Hub</h2>
+        <p class="section-subtitle">Rise to the top by sharing your daily gratitude!</p>
+
+        <div style="background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.08); border-radius: 16px; padding: 20px 15px; text-align: center; margin-bottom: 20px;">
+            <div style="font-size: 2.5rem; margin-bottom: 10px;">📖</div>
+            <h3 style="color: #f8fafc; margin-bottom: 8px; font-size: 1.05rem;">Official Knowledge Hub</h3>
+            <p style="color: #94a3b8; font-size: 0.8rem; line-height: 1.4; margin-bottom: 15px;">Read our latest premium articles on wealth and mindset directly inside the app.</p>
+            <button onclick="openInAppBrowser()" class="save-btn" style="background: linear-gradient(135deg, #0ea5e9, #0284c7); padding: 12px 20px;">
+                Open Website Articles ↗
+            </button>
+        </div>
+
+        <div class="leaderboard-card">
+            <div class="leaderboard-header">
+                <h3>🏆 Rising Star Leaderboard</h3>
+            </div>
+            <div class="rank-list" id="leaderboardList"></div>
+        </div>
+
+        <div class="gratitude-wall-card">
+            <h3>🙏 Public Gratitude Wall</h3>
+            <p class="manifest-desc">Share one positive thought today and earn <strong>+10 XP</strong>.</p>
+            <div class="manifest-input-group">
+                <input type="text" id="publicGratitudeInput" placeholder="I am grateful for...">
+                <button onclick="postPublicGratitude()">Post</button>
+            </div>
+            <div class="gratitude-feed" id="gratitudeFeed"></div>
+        </div>
+    </section>
+
+    <nav class="bottom-nav">
+        <div class="nav-item active-nav" onclick="switchTab('tab-journal', this)">
+            <div class="nav-icon-wrapper"><span class="nav-icon">📝</span></div>
+            <span class="nav-text">Journal</span>
+        </div>
+        <div class="nav-item" onclick="switchTab('tab-wisdom', this)">
+            <div class="nav-icon-wrapper"><span class="nav-icon">💡</span></div>
+            <span class="nav-text">Wisdom</span>
+        </div>
+        <div class="nav-item" onclick="switchTab('tab-smasher', this)">
+            <div class="nav-icon-wrapper"><span class="nav-icon">💥</span></div>
+            <span class="nav-text">Smash</span>
+        </div>
+        <div class="nav-item" onclick="switchTab('tab-manifest', this)">
+            <div class="nav-icon-wrapper"><span class="nav-icon">🚀</span></div>
+            <span class="nav-text">Manifest</span>
+        </div>
+        <div class="nav-item" onclick="switchTab('tab-community', this)">
+            <div class="nav-icon-wrapper"><span class="nav-icon">🌟</span></div>
+            <span class="nav-text">Comm.</span>
+        </div>
+    </nav>
+
+    <div id="inAppBrowser" class="in-app-browser">
+        <div class="in-app-header">
+            <span class="in-app-title">🔒 amazingmindshift.com</span>
+            <button class="in-app-close" onclick="closeInAppBrowser()">✖</button>
+        </div>
+        <iframe src="https://amazingmindshift.com"></iframe>
+    </div>
+
+</div>
+
+<script src="script.js"></script>
+</body>
+</html>
