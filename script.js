@@ -1,5 +1,5 @@
 // ==========================================
-// 1. GLOBALS & INIT (FIXED SCOPE TIMERS)
+// 1. GLOBALS & INIT
 // ==========================================
 let moodChartInstance = null;
 let breathTimer = null; 
@@ -17,6 +17,7 @@ window.onload = function() {
     getThoughtOfTheDay();
     initDB();
     
+    loadStats(); // Header stats
     renderCalendar();
     loadDailyReflection();
     loadTodayJournal();
@@ -24,7 +25,7 @@ window.onload = function() {
     renderHabits();
     
     ['333', '369', '555'].forEach(m => renderManifestList(m));
-    loadManifestHistory(); // Ensure history is loaded on startup
+    loadManifestHistory(); 
 };
 
 function switchTab(tabId, clicked) {
@@ -47,6 +48,33 @@ function updateWordCount(el, targetId) {
     const el2 = document.getElementById(targetId);
     if (el2) el2.innerText = `${words} word${words !== 1 ? 's' : ''}`;
     localStorage.setItem(el.id, el.value);
+}
+
+function loadStats() {
+    let streak = parseInt(localStorage.getItem('journalStreak') || '0');
+    const count = parseInt(localStorage.getItem('journalEntryCount') || '0');
+    
+    const lastSave = localStorage.getItem('lastJournalDate');
+    const todayStr = getTodayStr();
+    
+    let yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 1);
+    let yesterdayStr = `${yesterday.getFullYear()}-${String(yesterday.getMonth()+1).padStart(2,'0')}-${String(yesterday.getDate()).padStart(2,'0')}`;
+    
+    if (lastSave !== todayStr && lastSave !== yesterdayStr) {
+        streak = 0;
+        localStorage.setItem('journalStreak', streak);
+    }
+    
+    const sBadge = document.getElementById('streakCount');
+    if(sBadge) sBadge.innerText = streak;
+    
+    const jBadge = document.getElementById('journalCount');
+    if(jBadge) jBadge.innerText = count;
+    
+    const manifestLogs = JSON.parse(localStorage.getItem('manifestHistoryLogs') || '[]');
+    const manBadge = document.getElementById('manifestCount');
+    if(manBadge) manBadge.innerText = manifestLogs.length;
 }
 
 // ==========================================
@@ -202,14 +230,21 @@ function saveTodayData() {
     
     const lastSave = localStorage.getItem('lastJournalDate');
     let streak = parseInt(localStorage.getItem('journalStreak') || '0');
+    let count = parseInt(localStorage.getItem('journalEntryCount') || '0');
+    
     if (lastSave !== today) {
-        streak++;
+        let yesterday = new Date();
+        yesterday.setDate(yesterday.getDate() - 1);
+        let yesterdayStr = `${yesterday.getFullYear()}-${String(yesterday.getMonth()+1).padStart(2,'0')}-${String(yesterday.getDate()).padStart(2,'0')}`;
+        
+        if (lastSave === yesterdayStr) streak++; 
+        else streak = 1; 
+        
+        count++; 
         localStorage.setItem('journalStreak', streak);
         localStorage.setItem('lastJournalDate', today);
+        localStorage.setItem('journalEntryCount', count);
     }
-    
-    let count = parseInt(localStorage.getItem('journalEntryCount') || '0') + 1;
-    localStorage.setItem('journalEntryCount', count);
     
     document.getElementById('streakCount').innerText = streak;
     document.getElementById('journalCount').innerText = count;
@@ -425,7 +460,7 @@ function copyAffirmation() {
 }
 
 // ==========================================
-// 6. MOOD ANALYTICS & SUGGESTIONS
+// 6. MOOD ANALYTICS
 // ==========================================
 function logMood(btn, score, emoji, label) {
     document.querySelectorAll('.mood-btn').forEach(b => b.classList.remove('selected'));
@@ -511,12 +546,12 @@ function renderMoodChart() {
 }
 
 // ==========================================
-// 7. HABIT TRACKER
+// 7. HABIT TRACKER (PERFECTED LOGIC)
 // ==========================================
 let defaultHabits = [
     { id: 1, name: 'Drink Water', logs: {} },
     { id: 2, name: 'Meditate', logs: {} },
-    { id: 3, name: 'Practice Java/BCA Computer Science', logs: {} }
+    { id: 3, name: 'Practice Java/BCA', logs: {} }
 ];
 
 function getHabits() {
@@ -532,30 +567,68 @@ function renderHabits() {
     list.innerHTML = '';
     
     const today = new Date();
+    const todayStr = getTodayStr();
+    const currentDayOfWeek = today.getDay(); // 0 (Sun) to 6 (Sat)
+    
+    let startOfWeek = new Date(today);
+    startOfWeek.setDate(today.getDate() - currentDayOfWeek);
+    
     let dates = [];
-    for(let i=6; i>=0; i--) {
-        let d = new Date(today); d.setDate(today.getDate() - i);
+    for(let i=0; i<7; i++) {
+        let d = new Date(startOfWeek);
+        d.setDate(startOfWeek.getDate() + i);
         dates.push(`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`);
     }
 
     habits.forEach(h => {
+        // Feature 1: Total Check
+        const totalDone = Object.keys(h.logs).length;
+        
+        // Feature 2: Perfect Current Streak
         let streak = 0;
-        for(let i=dates.length-1; i>=0; i--) { if(h.logs[dates[i]]) streak++; else break; }
+        let checkDate = new Date(today); 
+        
+        // Agar aaj mark nahi kiya, toh pichle din se check karo
+        if(!h.logs[todayStr]) {
+            checkDate.setDate(checkDate.getDate() - 1); 
+        }
+        
+        for(let i=0; i<365; i++) {
+            let dStr = `${checkDate.getFullYear()}-${String(checkDate.getMonth()+1).padStart(2,'0')}-${String(checkDate.getDate()).padStart(2,'0')}`;
+            if(h.logs[dStr]) {
+                streak++;
+                checkDate.setDate(checkDate.getDate() - 1);
+            } else {
+                break; // Break the streak if missing
+            }
+        }
 
         let html = `<div class="habit-item">
             <button class="delete-habit-btn" onclick="deleteHabit(${h.id})">✖</button>
             <div class="habit-header">
                 <span class="habit-name">${h.name}</span>
-                <span class="habit-streak">🔥 ${streak}</span>
+                <span class="habit-streak">⭐ ${totalDone} &nbsp;|&nbsp; 🔥 ${streak}</span>
             </div>
             <div class="habit-days">`;
             
         dates.forEach((date, i) => {
             const isDone = h.logs[date];
-            const isToday = (i === 6);
-            const dayLabel = ["S","M","T","W","T","F","S"][new Date(date).getDay()];
-            html += `<div class="habit-day-circle ${isDone ? 'done' : ''} ${isToday ? 'today-circle' : ''}" 
-                        onclick="toggleHabit(${h.id}, '${date}')">${isDone ? '✓' : dayLabel}</div>`;
+            const isToday = (date === todayStr);
+            const dayLabel = ["S","M","T","W","T","F","S"][i];
+            
+            // Feature 3: Future Click Disable Logic
+            let targetDate = new Date(date);
+            let todayObj = new Date(todayStr);
+            targetDate.setHours(0,0,0,0);
+            todayObj.setHours(0,0,0,0);
+            let isFuture = targetDate > todayObj;
+            
+            if (isFuture && !isToday) {
+                html += `<div class="habit-day-circle" style="opacity:0.2; cursor:not-allowed;" title="Cannot track future dates">${dayLabel}</div>`;
+            } else {
+                html += `<div class="habit-day-circle ${isDone ? 'done' : ''} ${isToday ? 'today-circle' : ''}" 
+                            onclick="toggleHabit(${h.id}, '${date}')">${isDone ? '✓' : dayLabel}</div>`;
+            }
         });
         html += `</div></div>`;
         list.innerHTML += html;
@@ -581,6 +654,12 @@ function deleteHabit(id) {
 }
 
 function toggleHabit(id, dateStr) {
+    // Extra security to block future toggle manually
+    let targetDate = new Date(dateStr);
+    let todayObj = new Date(getTodayStr());
+    targetDate.setHours(0,0,0,0); todayObj.setHours(0,0,0,0);
+    if(targetDate > todayObj) return;
+
     let habits = getHabits();
     let h = habits.find(x => x.id === id);
     if(h) {
@@ -592,7 +671,7 @@ function toggleHabit(id, dateStr) {
 }
 
 // ==========================================
-// 8. FIXED SYNCED BREATHING, SMASHER & MANIFEST
+// 8. BREATHING, SMASHER & MANIFEST
 // ==========================================
 function startBreathing() {
     if (breathTimer) {
@@ -677,14 +756,14 @@ function archiveCompletedManifest(method, coreDesire, totalCount) {
     history.push({ method, text: coreDesire, date: getTodayStr(), reps: totalCount });
     localStorage.setItem('manifestHistoryLogs', JSON.stringify(history));
     localStorage.removeItem(`listData${method}`);
-    const mBadge = document.getElementById('manifestCount');
-    if(mBadge) mBadge.innerText = history.length;
+    
+    loadStats(); // Header counter update
+    
     alert(`✨ Success! You completed ${totalCount} reps!`);
     renderManifestList(method);
     loadManifestHistory();
 }
 
-// ==== NEW: MANIFESTATION HISTORY LOGIC ====
 function loadManifestHistory() {
     const box = document.getElementById('manifestHistoryBox');
     const listArea = document.getElementById('historyLogList');
@@ -728,9 +807,7 @@ function deleteHistoryItem(index) {
         history.splice(index, 1);
         localStorage.setItem('manifestHistoryLogs', JSON.stringify(history));
         loadManifestHistory();
-        
-        const mBadge = document.getElementById('manifestCount');
-        if(mBadge) mBadge.innerText = history.length;
+        loadStats(); // Update header
     }
 }
 
