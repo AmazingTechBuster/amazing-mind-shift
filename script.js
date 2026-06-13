@@ -13,11 +13,16 @@ window.onload = function() {
         document.getElementById('themeToggle').innerText = '🌙';
     }
     
+    if (!localStorage.getItem('userName')) {
+        document.getElementById('onboardingModal').classList.add('active');
+    }
+    
     updateTimeVibe();
     getThoughtOfTheDay();
     initDB();
     
-    loadStats(); // Header stats
+    initAIBots(); 
+    loadStats(); 
     renderCalendar();
     loadDailyReflection();
     loadTodayJournal();
@@ -26,13 +31,31 @@ window.onload = function() {
     
     ['333', '369', '555'].forEach(m => renderManifestList(m));
     loadManifestHistory(); 
+    
+    renderCustomAffirmations();
+    renderCommunity(); 
+    checkAllBadges(); 
+    renderQuotesVault(); // New Quotes Vault
 };
 
+// --- SMOOTH TAB SWITCHING ---
 function switchTab(tabId, clicked) {
-    document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active-tab'));
-    document.getElementById(tabId).classList.add('active-tab');
+    document.querySelectorAll('.tab-content').forEach(t => {
+        t.classList.remove('active-tab');
+    });
+    
+    const target = document.getElementById(tabId);
+    // Restart CSS animation by causing a reflow
+    void target.offsetWidth; 
+    target.classList.add('active-tab');
+    
     document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active-nav'));
     clicked.classList.add('active-nav');
+    
+    // Add Nav Pop Animation
+    clicked.classList.add('nav-pop');
+    setTimeout(() => clicked.classList.remove('nav-pop'), 300);
+    
     window.scrollTo({ top: 0, behavior: 'smooth' });
     
     if(tabId === 'tab-tools') { setTimeout(renderMoodChart, 100); }
@@ -53,7 +76,6 @@ function updateWordCount(el, targetId) {
 function loadStats() {
     let streak = parseInt(localStorage.getItem('journalStreak') || '0');
     const count = parseInt(localStorage.getItem('journalEntryCount') || '0');
-    
     const lastSave = localStorage.getItem('lastJournalDate');
     const todayStr = getTodayStr();
     
@@ -78,7 +100,391 @@ function loadStats() {
 }
 
 // ==========================================
-// 2. TIMELINE DATA
+// AI LEADERBOARD BOT SYSTEM
+// ==========================================
+function initAIBots() {
+    if (!localStorage.getItem('communityBots')) {
+        const initialBots = [
+            { id: 'b1', name: "Rahul S.", points: 200 },
+            { id: 'b2', name: "Priya M.", points: 150 },
+            { id: 'b3', name: "Amit K.", points: 80 }
+        ];
+        localStorage.setItem('communityBots', JSON.stringify(initialBots));
+        localStorage.setItem('lastBotUpdate', Date.now());
+    } else {
+        let lastUpdate = parseInt(localStorage.getItem('lastBotUpdate') || Date.now());
+        let now = Date.now();
+        let daysPassed = Math.floor((now - lastUpdate) / (1000 * 60 * 60 * 24));
+
+        if (daysPassed > 0) {
+            if (daysPassed > 5) daysPassed = 5; 
+            let bots = JSON.parse(localStorage.getItem('communityBots'));
+            bots.forEach(bot => { bot.points += daysPassed * (Math.floor(Math.random() * 30) + 30); });
+            localStorage.setItem('communityBots', JSON.stringify(bots));
+            localStorage.setItem('lastBotUpdate', now);
+        }
+    }
+}
+
+function simulateBotActivity() {
+    let bots = JSON.parse(localStorage.getItem('communityBots') || '[]');
+    let changed = false;
+    bots.forEach(bot => {
+        if (Math.random() > 0.5) {
+            bot.points += (Math.floor(Math.random() * 2) + 1) * 10; 
+            changed = true;
+        }
+    });
+    if (changed) { localStorage.setItem('communityBots', JSON.stringify(bots)); }
+}
+
+function addXP(amount, reason) {
+    let xp = parseInt(localStorage.getItem('myCommunityPoints') || '0');
+    xp += amount;
+    localStorage.setItem('myCommunityPoints', xp);
+    
+    const toast = document.getElementById('xpToast');
+    if(toast) {
+        toast.innerText = `+${amount} XP (${reason}) 🌟`;
+        toast.classList.add('active');
+        setTimeout(() => toast.classList.remove('active'), 2500);
+    }
+    
+    simulateBotActivity(); 
+    renderCommunity();     
+}
+
+// ==========================================
+// ONBOARDING & GREETING
+// ==========================================
+function saveUserName() {
+    const nameInput = document.getElementById('userNameInput').value.trim();
+    if(!nameInput) { alert("Please enter your name."); return; }
+    localStorage.setItem('userName', nameInput);
+    document.getElementById('onboardingModal').classList.remove('active');
+    updateTimeVibe();
+    renderCommunity();
+}
+
+function updateTimeVibe() {
+    const hours = new Date().getHours();
+    const card = document.getElementById('timeVibeCard');
+    card.classList.remove('bg-morning', 'bg-afternoon', 'bg-evening');
+    
+    let userName = localStorage.getItem('userName');
+    let nameSuffix = userName ? `, ${userName}!` : '!';
+    let vibe = {};
+
+    if (hours >= 4 && hours < 12) { 
+        card.classList.add('bg-morning'); 
+        vibe = { greeting: "Good Morning" + nameSuffix, icon: "🌅", quote: "A beautiful day begins with a beautiful mindset!" };
+    } else if (hours >= 12 && hours < 17) { 
+        card.classList.add('bg-afternoon'); 
+        vibe = { greeting: "Good Afternoon" + nameSuffix, icon: "☀️", quote: "Pause, take a deep breath. Peace is a continuous process." };
+    } else if (hours >= 17 && hours < 21) { 
+        card.classList.add('bg-evening'); 
+        vibe = { greeting: "Good Evening" + nameSuffix, icon: "🌙", quote: "End the day with a grateful heart. Let go of today." };
+    } else {
+        card.classList.add('bg-evening'); 
+        vibe = { greeting: "Good Night" + nameSuffix, icon: "🌃", quote: "Rest your mind. Tomorrow brings a fresh start." };
+    }
+    
+    document.getElementById('vibeGreeting').innerText = vibe.greeting;
+    document.getElementById('vibeIcon').innerText = vibe.icon;
+    
+    const quoteEl = document.getElementById('timeQuote');
+    if (quoteEl) {
+        quoteEl.style.opacity = 0;
+        setTimeout(() => {
+            quoteEl.innerText = `"${vibe.quote}"`;
+            quoteEl.style.opacity = 1;
+        }, 200);
+    }
+}
+
+// ==========================================
+// BADGES SYSTEM 
+// ==========================================
+const badgeDefs = [
+    { id: 'first_step', icon: '🌱', name: 'First Step', desc: 'You wrote your first journal entry!' },
+    { id: 'week_warrior', icon: '🔥', name: 'Week Warrior', desc: '7 days in a row! You\'re unstoppable.' },
+    { id: 'month_master', icon: '💎', name: 'Month Master', desc: '30 days strong! You are legendary.' },
+    { id: 'gratitude_king', icon: '🙏', name: 'Gratitude Leader', desc: '100 gratitude entries! Pure positive energy.' },
+    { id: 'challenge_champ', icon: '🏆', name: 'Challenge Champion', desc: 'Completed 333, 369, and 555! True manifestor.' },
+    { id: 'aff_creator', icon: '✨', name: 'Affirmation Creator', desc: 'You created your own affirmation!' },
+    { id: 'mind_master', icon: '🧘', name: 'Mind Master', desc: '7 days of mood tracking. Self-aware champion.' },
+    { id: 'rising_star', icon: '🌟', name: 'Rising Star', desc: 'You\'ve earned 5 badges. You\'re a true star!' }
+];
+
+function renderBadges() {
+    const grid = document.getElementById('badgesGrid');
+    if(!grid) return;
+    grid.innerHTML = '';
+    let earnedKeys = JSON.parse(localStorage.getItem('badgesEarned') || '[]');
+
+    badgeDefs.forEach(b => {
+        const isEarned = earnedKeys.includes(b.id);
+        const earnedDate = localStorage.getItem('badge_' + b.id + '_earned');
+        
+        let div = document.createElement('div');
+        div.className = `badge-card hover-bounce ${isEarned ? 'earned' : 'locked'}`;
+        div.onclick = () => openBadgeModal(b, earnedDate);
+        div.innerHTML = `
+            ${!isEarned ? '<div class="badge-lock-overlay">🔒</div>' : ''}
+            <div class="badge-icon">${b.icon}</div>
+            <div class="badge-name">${b.name}</div>
+        `;
+        grid.appendChild(div);
+    });
+}
+
+function openBadgeModal(badge, earnedDate) {
+    document.getElementById('bdIcon').innerText = badge.icon;
+    document.getElementById('bdName').innerText = badge.name;
+    document.getElementById('bdDesc').innerText = badge.desc;
+    document.getElementById('bdDate').innerText = earnedDate ? `Unlocked on: ${earnedDate}` : "Status: Locked";
+    document.getElementById('badgeDetailModal').classList.add('active');
+}
+
+function closeBadgeModal(e, force=false) {
+    if (force || e.target.id === 'badgeDetailModal') { document.getElementById('badgeDetailModal').classList.remove('active'); }
+}
+
+function showBadgeToast(badgeName, icon) {
+    const toast = document.getElementById('badgeToast');
+    document.getElementById('badgeToastIcon').innerText = icon;
+    document.getElementById('badgeToastName').innerText = badgeName;
+    toast.classList.add('active');
+    setTimeout(() => { toast.classList.remove('active'); }, 3000);
+}
+
+function checkAllBadges() {
+    let earnedKeys = JSON.parse(localStorage.getItem('badgesEarned') || '[]');
+    let newlyEarned = false;
+    const todayStr = new Date().toLocaleDateString();
+
+    const unlock = (id) => {
+        if (!earnedKeys.includes(id)) {
+            localStorage.setItem('badge_' + id + '_earned', todayStr);
+            earnedKeys.push(id);
+            localStorage.setItem('badgesEarned', JSON.stringify(earnedKeys)); 
+            const bDef = badgeDefs.find(x => x.id === id);
+            setTimeout(() => showBadgeToast(bDef.name, bDef.icon), 500);
+            newlyEarned = true;
+        }
+    };
+
+    if (parseInt(localStorage.getItem('journalEntryCount')||0) >= 1) unlock('first_step');
+    let streak = parseInt(localStorage.getItem('journalStreak')||0);
+    if (streak >= 7) unlock('week_warrior');
+    if (streak >= 30) unlock('month_master');
+    let totalGrads = parseInt(localStorage.getItem('totalGratitudePosts') || '0');
+    if (totalGrads >= 100) unlock('gratitude_king');
+    let manLogs = JSON.parse(localStorage.getItem('manifestHistoryLogs')||'[]');
+    let methods = manLogs.map(l => l.method);
+    if (methods.includes('333') && methods.includes('369') && methods.includes('555')) unlock('challenge_champ');
+    let custAffs = JSON.parse(localStorage.getItem('customAffirmations')||'[]');
+    if (custAffs.length >= 1) unlock('aff_creator');
+    
+    let moodLogs = JSON.parse(localStorage.getItem('moodLogs')||'{}');
+    let mStreak = 0;
+    let checkDate = new Date();
+    if(!moodLogs[getTodayStr()]) checkDate.setDate(checkDate.getDate() - 1);
+    for(let i=0; i<30; i++) {
+        let dStr = `${checkDate.getFullYear()}-${String(checkDate.getMonth()+1).padStart(2,'0')}-${String(checkDate.getDate()).padStart(2,'0')}`;
+        if(moodLogs[dStr]) { mStreak++; checkDate.setDate(checkDate.getDate()-1); }
+        else break;
+    }
+    if (mStreak >= 7) unlock('mind_master');
+    if (earnedKeys.length >= 5 && !earnedKeys.includes('rising_star')) unlock('rising_star');
+    if (newlyEarned) { setTimeout(renderBadges, 100); }
+}
+
+
+// ==========================================
+// CUSTOM AFFIRMATIONS 
+// ==========================================
+function addCustomAffirmation() {
+    const text = document.getElementById('customAffInput').value.trim();
+    let cat = document.getElementById('customAffCat').value.trim();
+    if(!text) { alert("Please write an affirmation!"); return; }
+    if(!cat) cat = "Personal";
+    
+    let affs = JSON.parse(localStorage.getItem('customAffirmations') || '[]');
+    affs.push({ id: Date.now(), text, category: cat, dateAdded: getTodayStr() });
+    localStorage.setItem('customAffirmations', JSON.stringify(affs));
+    
+    document.getElementById('customAffInput').value = '';
+    document.getElementById('customAffCat').value = '';
+    renderCustomAffirmations();
+    addXP(15, "Custom Affirmation");
+    checkAllBadges();
+}
+
+function deleteCustomAffirmation(id) {
+    if(confirm("Delete this custom affirmation?")) {
+        let affs = JSON.parse(localStorage.getItem('customAffirmations') || '[]');
+        affs = affs.filter(a => a.id !== id);
+        localStorage.setItem('customAffirmations', JSON.stringify(affs));
+        renderCustomAffirmations();
+    }
+}
+
+function renderCustomAffirmations() {
+    const list = document.getElementById('customAffirmationsList');
+    if(!list) return;
+    
+    const affs = JSON.parse(localStorage.getItem('customAffirmations') || '[]');
+    list.innerHTML = '';
+    
+    const scrollBar = document.getElementById('affFilterScroll');
+    document.querySelectorAll('.dynamic-chip').forEach(el => el.remove());
+    
+    if (affs.length === 0) {
+        list.innerHTML = '<p style="font-size:0.85rem; color:var(--muted); font-style:italic;">No custom affirmations yet.</p>';
+        return;
+    }
+    
+    let uniqueCats = [...new Set(affs.map(a => a.category))];
+    uniqueCats.forEach(cat => {
+        let btn = document.createElement('button');
+        btn.className = 'aff-chip dynamic-chip hover-bounce';
+        btn.innerText = `🏷️ ${cat}`;
+        btn.onclick = () => scrollToCategory('aff-custom');
+        scrollBar.appendChild(btn);
+    });
+    
+    [...affs].reverse().forEach((a, i) => {
+        let div = document.createElement('div');
+        div.className = 'custom-aff-item animate-item';
+        div.style.animationDelay = `${i * 0.05}s`;
+        div.innerHTML = `
+            <div style="display:flex; justify-content:space-between; margin-bottom:5px; align-items:center;">
+                <div class="aff-cat-tag">${a.category}</div>
+                <button class="custom-del-btn" onclick="deleteCustomAffirmation(${a.id})">✖</button>
+            </div>
+            <div onclick="copyQuickAff('${a.text.replace(/'/g, "\\'")}')" style="font-weight:600;">${a.text}</div>
+        `;
+        list.appendChild(div);
+    });
+}
+
+
+// ==========================================
+// COMMUNITY HUB LEADERBOARD & XP
+// ==========================================
+function getStatus(points) {
+    if (points >= 1000) return "Rising Star ✨";
+    if (points >= 500) return "Mindset Master";
+    if (points >= 100) return "Explorer";
+    return "Starter";
+}
+
+function renderCommunity() {
+    let myPoints = parseInt(localStorage.getItem('myCommunityPoints') || '0');
+    const lbContainer = document.getElementById('leaderboardList');
+    if(!lbContainer) return;
+    lbContainer.innerHTML = '';
+    
+    let bots = JSON.parse(localStorage.getItem('communityBots') || '[]');
+    let board = [...bots];
+    
+    board.push({ name: localStorage.getItem('userName') || "You", points: myPoints, isMe: true });
+    board.sort((a, b) => b.points - a.points);
+    
+    board.forEach((user, index) => {
+        let rank = index + 1;
+        const div = document.createElement('div');
+        div.className = `rank-item rank-${rank} ${user.isMe ? 'is-me' : ''} animate-item`;
+        div.style.animationDelay = `${index * 0.05}s`;
+        div.innerHTML = `
+            <div class="rank-badge">${rank}</div>
+            <div class="rank-info">
+                <div class="rank-name">${user.name}</div>
+                <div class="rank-points">${user.points} XP</div>
+            </div>
+            <div class="rank-status">${getStatus(user.points)}</div>
+        `;
+        lbContainer.appendChild(div);
+    });
+    renderGratitudeFeed();
+}
+
+function postPublicGratitude() {
+    const input = document.getElementById('publicGratitudeInput');
+    const text = input.value.trim();
+    if(!text) { alert("Please write your gratitude first."); return; }
+    
+    const userName = localStorage.getItem('userName') || 'Anonymous';
+    const now = new Date();
+    const timeStr = now.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+    
+    const newPost = { id: Date.now(), name: userName, text: text, time: timeStr, likes: 0 };
+    let posts = JSON.parse(localStorage.getItem('gratitudePosts') || '[]');
+    
+    posts.unshift(newPost);
+    if(posts.length > 50) posts = posts.slice(0, 50); 
+    localStorage.setItem('gratitudePosts', JSON.stringify(posts));
+    
+    let totalGrads = parseInt(localStorage.getItem('totalGratitudePosts') || '0');
+    localStorage.setItem('totalGratitudePosts', totalGrads + 1);
+    
+    input.value = '';
+    
+    const toast = document.getElementById('postToast');
+    toast.classList.add('active');
+    setTimeout(() => { toast.classList.remove('active'); }, 2000);
+    
+    addXP(10, "Gratitude Posted");
+    checkAllBadges();
+}
+
+function likeGratitudePost(id) {
+    let posts = JSON.parse(localStorage.getItem('gratitudePosts') || '[]');
+    let post = posts.find(p => p.id === id);
+    if(post) {
+        post.likes = (post.likes || 0) + 1;
+        localStorage.setItem('gratitudePosts', JSON.stringify(posts));
+        renderGratitudeFeed();
+    }
+}
+
+function renderGratitudeFeed() {
+    const feed = document.getElementById('gratitudeFeed');
+    if(!feed) return;
+    feed.innerHTML = '';
+    
+    const savedPosts = JSON.parse(localStorage.getItem('gratitudePosts') || '[]');
+    const fakeFeed = [
+        { id: 1, name: "Rahul S.", text: "Grateful for the peace I found in my morning meditation today.", time: "2 hrs ago", likes: 4 },
+        { id: 2, name: "Priya M.", text: "Thankful for the new opportunity. The universe is responding!", time: "5 hrs ago", likes: 9 }
+    ];
+    const allPosts = [...savedPosts, ...fakeFeed];
+    
+    if (allPosts.length === 0) {
+        feed.innerHTML = '<p style="color:var(--muted); font-size:0.85rem; text-align:center; padding:10px;">No posts yet. Be the first! 🌟</p>';
+        return;
+    }
+    
+    allPosts.forEach((post, i) => {
+        const div = document.createElement('div');
+        div.className = 'gratitude-post animate-item';
+        div.style.animationDelay = `${i * 0.05}s`;
+        div.innerHTML = `
+            <div class="gratitude-post-user">
+                <span>👤 ${post.name}</span>
+                <span>${post.time || 'Recently'}</span>
+            </div>
+            <div class="gratitude-post-text">"${post.text}"</div>
+            <button class="like-btn hover-bounce" onclick="likeGratitudePost(${post.id || 0})">🙏 <span style="color:var(--accent2); font-weight:800;">${post.likes || 0}</span></button>
+        `;
+        feed.appendChild(div);
+    });
+}
+
+
+// ==========================================
+// TIMELINE DATA & CUSTOM QUOTES (VAULT)
 // ==========================================
 const dailyThoughts = [
     "Your subconscious mind is a garden. What you plant today, you will harvest tomorrow.",
@@ -92,6 +498,78 @@ const dailyThoughts = [
     "Your only limit is your mind. Break it. Rebuild it. Rise."
 ];
 
+// --- NAYA: Quotes Vault Logic ---
+function openQuotesVault() {
+    document.getElementById('quotesVault').classList.add('active');
+    renderQuotesVault();
+}
+function closeQuotesVault() {
+    document.getElementById('quotesVault').classList.remove('active');
+}
+
+function saveNewQuote() {
+    const val = document.getElementById('newQuoteInput').value.trim();
+    if(!val) return;
+    let quotes = JSON.parse(localStorage.getItem('customQuotesList') || '[]');
+    quotes.push({ id: Date.now(), text: val });
+    localStorage.setItem('customQuotesList', JSON.stringify(quotes));
+    document.getElementById('newQuoteInput').value = '';
+    renderQuotesVault();
+    getThoughtOfTheDay(); // Update home screen rotation
+}
+
+function deleteCustomQuote(id) {
+    if(confirm("Delete this quote?")) {
+        let quotes = JSON.parse(localStorage.getItem('customQuotesList') || '[]');
+        quotes = quotes.filter(q => q.id !== id);
+        localStorage.setItem('customQuotesList', JSON.stringify(quotes));
+        renderQuotesVault();
+        getThoughtOfTheDay();
+    }
+}
+
+function renderQuotesVault() {
+    const list = document.getElementById('customQuotesListArea');
+    if(!list) return;
+    const quotes = JSON.parse(localStorage.getItem('customQuotesList') || '[]');
+    list.innerHTML = '';
+    if(quotes.length === 0) {
+        list.innerHTML = '<p style="text-align:center; color:var(--muted); font-style:italic;">No custom quotes added yet.</p>';
+        return;
+    }
+    
+    [...quotes].reverse().forEach((q, i) => {
+        let div = document.createElement('div');
+        div.className = 'custom-aff-item animate-item';
+        div.style.animationDelay = `${i * 0.05}s`;
+        div.innerHTML = `
+            <div style="font-weight:600; font-style:italic; padding-right:20px;">"${q.text}"</div>
+            <button class="custom-del-btn" style="position:absolute; top:10px; right:10px;" onclick="deleteCustomQuote(${q.id})">✖</button>
+        `;
+        list.appendChild(div);
+    });
+}
+
+function getThoughtOfTheDay() {
+    const dtElement = document.getElementById('dailyThoughtText');
+    if (!dtElement) return;
+    
+    // Mix custom quotes with default quotes
+    const customQuotes = JSON.parse(localStorage.getItem('customQuotesList') || '[]');
+    const allQuotes = [...dailyThoughts, ...customQuotes.map(q => q.text)];
+    
+    // Smooth transition logic
+    dtElement.style.opacity = 0;
+    setTimeout(() => {
+        const idx = new Date().getDate() % allQuotes.length;
+        dtElement.innerText = `"${allQuotes[idx]}"`;
+        dtElement.style.opacity = 1;
+    }, 300);
+}
+
+// ==========================================
+// WISDOM DATA
+// ==========================================
 const wisdomData = {
     anxiety: { shlok: "कर्मण्येवाधिकारस्ते मा फलेषु कदाचन।", meaning: "Focus on action, not the outcome.", quote: "\"Overthinking ruins you. Action cures fear.\"", affirmation: "I breathe in peace and breathe out tension. I am safe, and I am in control of my mind." },
     anger: { shlok: "क्रोधाद्भवति सम्मोहः सम्मोहात्स्मृतिविभ्रमः।", meaning: "Anger leads to clouding of judgment.", quote: "\"For every minute you are angry, you lose sixty seconds of peace.\"", affirmation: "I choose peace over perfection. I release this anger and reclaim my inner calm." },
@@ -170,32 +648,9 @@ const reflections = [
     "What is one word that describes your mood today?"
 ]; 
 
-const timeBasedVibes = {
-    morning: { greeting: "Good Morning", icon: "🌅", quote: "\"A beautiful day begins with a beautiful mindset!\"" },
-    afternoon: { greeting: "Good Afternoon", icon: "☀️", quote: "\"Pause, take a deep breath. Peace is a continuous process.\"" },
-    evening: { greeting: "Good Evening", icon: "🌙", quote: "\"End the day with a grateful heart. Let go of today.\"" }
-};
-
 // ==========================================
 // 3. JOURNAL & CALENDAR
 // ==========================================
-function updateTimeVibe() {
-    const hours = new Date().getHours();
-    const card = document.getElementById('timeVibeCard');
-    card.classList.remove('bg-morning', 'bg-afternoon', 'bg-evening');
-    let vibe;
-    if (hours >= 4 && hours < 12) { card.classList.add('bg-morning'); vibe = timeBasedVibes.morning; }
-    else if (hours >= 12 && hours < 17) { card.classList.add('bg-afternoon'); vibe = timeBasedVibes.afternoon; }
-    else { card.classList.add('bg-evening'); vibe = timeBasedVibes.evening; }
-    document.getElementById('vibeGreeting').innerText = vibe.greeting;
-    document.getElementById('vibeIcon').innerText = vibe.icon;
-    document.getElementById('timeQuote').innerText = vibe.quote;
-}
-
-function getThoughtOfTheDay() {
-    const idx = new Date().getDate() % dailyThoughts.length;
-    document.getElementById('dailyThoughtText').innerText = `"${dailyThoughts[idx]}"`;
-}
 
 function loadDailyReflection() {
     const day = new Date().getDate();
@@ -241,18 +696,22 @@ function saveTodayData() {
         else streak = 1; 
         
         count++; 
+        
         localStorage.setItem('journalStreak', streak);
         localStorage.setItem('lastJournalDate', today);
         localStorage.setItem('journalEntryCount', count);
+        
+        document.getElementById('streakCount').innerText = streak;
+        document.getElementById('journalCount').innerText = count;
     }
-    
-    document.getElementById('streakCount').innerText = streak;
-    document.getElementById('journalCount').innerText = count;
     
     const ind = document.getElementById('saveIndicator');
     ind.classList.add('visible');
     setTimeout(() => ind.classList.remove('visible'), 2500);
     renderCalendar(); 
+    
+    addXP(20, "Journal Saved");
+    checkAllBadges(); 
 }
 
 let currentMonth = new Date().getMonth();
@@ -324,7 +783,7 @@ function openCalendarEntry(dateStr) {
 function closeCalendarEntry() { document.getElementById('calendarEntryModal').classList.remove('active'); }
 
 // ==========================================
-// 4. VISION BOARD (IndexedDB)
+// VISION BOARD (IndexedDB)
 // ==========================================
 function initDB() {
     const request = indexedDB.open(dbName, 1);
@@ -370,9 +829,10 @@ function loadVisionImages() {
         if(items.length === 0) { empty.style.display = 'block'; } 
         else { empty.style.display = 'none'; }
         
-        items.forEach(item => {
+        items.forEach((item, index) => {
             const div = document.createElement('div');
-            div.className = 'vision-item';
+            div.className = 'vision-item animate-item';
+            div.style.animationDelay = `${index * 0.05}s`;
             div.innerHTML = `
                 <img src="${item.imgData}" alt="Vision Goal">
                 ${item.title ? `<p>${item.title}</p>` : ''}
@@ -397,29 +857,22 @@ function loadVisionImages() {
             };
             
             div.addEventListener('touchstart', startPress);
-            div.addEventListener('touchend', (e) => {
-                endPress();
-                if(isLongPress) e.preventDefault(); 
-            });
+            div.addEventListener('touchend', (e) => { endPress(); if(isLongPress) e.preventDefault(); });
             div.addEventListener('mousedown', startPress);
             div.addEventListener('mouseup', endPress);
             div.addEventListener('mouseleave', endPress);
             
             div.querySelector('img').addEventListener('click', () => {
-                if (!isLongPress) {
-                    openFullscreen(item.imgData, item.title);
-                }
+                if (!isLongPress) openFullscreen(item.imgData, item.title);
             });
-            
             grid.appendChild(div);
         });
     }
 }
 
 function deleteVisionItem(id) {
-    div = document.querySelector('.vision-item.deleting');
+    let div = document.querySelector('.vision-item.deleting');
     if(div) div.classList.remove('deleting');
-    
     setTimeout(() => {
         if(confirm("Delete this vision from your board?")) {
             const tx = db.transaction(storeName, "readwrite");
@@ -437,7 +890,7 @@ function openFullscreen(src, title) {
 function closeFullscreen() { document.getElementById('fullscreenImageModal').classList.remove('active'); }
 
 // ==========================================
-// 5. GEETA WISDOM
+// GEETA WISDOM
 // ==========================================
 function showGeetaQuote() {
     const emotion = document.getElementById('emotionSelect').value;
@@ -453,14 +906,15 @@ function showGeetaQuote() {
 }
 
 function copyAffirmation() {
-    const text = document.getElementById('emotionAffirmation').innerText.replace(/"/g, '');
+    let text = document.getElementById('emotionAffirmation').innerText.replace(/"/g, '');
     navigator.clipboard.writeText(text).then(() => {
         alert("✨ Affirmation copied! Ab Manifest tab (🚀) mein jaakar isko paste karein.");
     }).catch(err => { console.error('Copy failed: ', err); });
 }
+function copyQuickAff(text) { navigator.clipboard.writeText(text); alert("✨ Copied!"); }
 
 // ==========================================
-// 6. MOOD ANALYTICS
+// MOOD ANALYTICS
 // ==========================================
 function logMood(btn, score, emoji, label) {
     document.querySelectorAll('.mood-btn').forEach(b => b.classList.remove('selected'));
@@ -474,6 +928,8 @@ function logMood(btn, score, emoji, label) {
     showMoodSuggestion(label, emoji);
     renderMoodChart();
     renderCalendar(); 
+    addXP(5, "Mood Logged");
+    checkAllBadges(); 
 }
 
 function showMoodSuggestion(mood, emoji) {
@@ -483,7 +939,7 @@ function showMoodSuggestion(mood, emoji) {
     const geeta = wisdomData[data.emotion];
     if (!geeta) return;
 
-    card.className = 'mood-suggestion-card ' + data.bgClass;
+    card.className = 'mood-suggestion-card animate-item ' + data.bgClass;
     document.getElementById('moodSuggEmoji').innerText = emoji;
     document.getElementById('moodSuggTitle').innerText = data.title;
     document.getElementById('moodSuggShlok').innerText = geeta.shlok;
@@ -546,7 +1002,7 @@ function renderMoodChart() {
 }
 
 // ==========================================
-// 7. HABIT TRACKER (PERFECTED LOGIC)
+// HABIT TRACKER
 // ==========================================
 let defaultHabits = [
     { id: 1, name: 'Drink Water', logs: {} },
@@ -568,7 +1024,7 @@ function renderHabits() {
     
     const today = new Date();
     const todayStr = getTodayStr();
-    const currentDayOfWeek = today.getDay(); // 0 (Sun) to 6 (Sat)
+    const currentDayOfWeek = today.getDay(); 
     
     let startOfWeek = new Date(today);
     startOfWeek.setDate(today.getDate() - currentDayOfWeek);
@@ -580,34 +1036,21 @@ function renderHabits() {
         dates.push(`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`);
     }
 
-    habits.forEach(h => {
-        // Feature 1: Total Check
-        const totalDone = Object.keys(h.logs).length;
-        
-        // Feature 2: Perfect Current Streak
+    habits.forEach((h, hIndex) => {
         let streak = 0;
         let checkDate = new Date(today); 
-        
-        // Agar aaj mark nahi kiya, toh pichle din se check karo
-        if(!h.logs[todayStr]) {
-            checkDate.setDate(checkDate.getDate() - 1); 
-        }
-        
+        if(!h.logs[todayStr]) { checkDate.setDate(checkDate.getDate() - 1); }
         for(let i=0; i<365; i++) {
             let dStr = `${checkDate.getFullYear()}-${String(checkDate.getMonth()+1).padStart(2,'0')}-${String(checkDate.getDate()).padStart(2,'0')}`;
-            if(h.logs[dStr]) {
-                streak++;
-                checkDate.setDate(checkDate.getDate() - 1);
-            } else {
-                break; // Break the streak if missing
-            }
+            if(h.logs[dStr]) { streak++; checkDate.setDate(checkDate.getDate() - 1); } 
+            else break; 
         }
 
-        let html = `<div class="habit-item">
-            <button class="delete-habit-btn" onclick="deleteHabit(${h.id})">✖</button>
+        let html = `<div class="habit-item animate-item" style="animation-delay:${hIndex * 0.05}s">
+            <button class="delete-habit-btn hover-bounce" onclick="deleteHabit(${h.id})">✖</button>
             <div class="habit-header">
                 <span class="habit-name">${h.name}</span>
-                <span class="habit-streak">⭐ ${totalDone} &nbsp;|&nbsp; 🔥 ${streak}</span>
+                <span class="habit-streak">🔥 ${streak}</span>
             </div>
             <div class="habit-days">`;
             
@@ -616,17 +1059,15 @@ function renderHabits() {
             const isToday = (date === todayStr);
             const dayLabel = ["S","M","T","W","T","F","S"][i];
             
-            // Feature 3: Future Click Disable Logic
             let targetDate = new Date(date);
             let todayObj = new Date(todayStr);
-            targetDate.setHours(0,0,0,0);
-            todayObj.setHours(0,0,0,0);
+            targetDate.setHours(0,0,0,0); todayObj.setHours(0,0,0,0);
             let isFuture = targetDate > todayObj;
             
             if (isFuture && !isToday) {
                 html += `<div class="habit-day-circle" style="opacity:0.2; cursor:not-allowed;" title="Cannot track future dates">${dayLabel}</div>`;
             } else {
-                html += `<div class="habit-day-circle ${isDone ? 'done' : ''} ${isToday ? 'today-circle' : ''}" 
+                html += `<div class="habit-day-circle ${isDone ? 'done' : ''} ${isToday ? 'today-circle' : ''} hover-bounce" 
                             onclick="toggleHabit(${h.id}, '${date}')">${isDone ? '✓' : dayLabel}</div>`;
             }
         });
@@ -654,7 +1095,6 @@ function deleteHabit(id) {
 }
 
 function toggleHabit(id, dateStr) {
-    // Extra security to block future toggle manually
     let targetDate = new Date(dateStr);
     let todayObj = new Date(getTodayStr());
     targetDate.setHours(0,0,0,0); todayObj.setHours(0,0,0,0);
@@ -671,17 +1111,12 @@ function toggleHabit(id, dateStr) {
 }
 
 // ==========================================
-// 8. BREATHING, SMASHER & MANIFEST
+// BREATHING, SMASHER & MANIFEST
 // ==========================================
 function startBreathing() {
-    if (breathTimer) {
-        clearTimeout(breathTimer);
-        breathTimer = null;
-    }
-    
+    if (breathTimer) { clearTimeout(breathTimer); breathTimer = null; }
     const circle = document.getElementById('breathCircle');
     const instr = document.getElementById('breathInstruct');
-    
     circle.className = 'breath-circle';
     void circle.offsetWidth; 
     
@@ -690,19 +1125,16 @@ function startBreathing() {
         { phase: 'hold', label: 'Hold...', dur: 7000, text: 'Saans ko andar hi roko (7 sec)' },
         { phase: 'exhale', label: 'Exhale...', dur: 8000, text: 'Muh se dhire dhire bahar chodho (8 sec)' }
     ];
-    
     let i = 0;
     function runStep() {
         const step = steps[i % steps.length];
         circle.className = 'breath-circle ' + step.phase;
         circle.innerText = step.label;
         instr.innerText = step.text;
-        
         breathTimer = setTimeout(() => {
             i++;
-            if (i < steps.length * 3) {
-                runStep();
-            } else { 
+            if (i < steps.length * 3) { runStep(); } 
+            else { 
                 circle.className = 'breath-circle'; 
                 circle.innerText = 'Done ✓'; 
                 instr.innerText = 'Aap bohot relaxed feel karoge ab. Wonderful! 🌿'; 
@@ -757,7 +1189,9 @@ function archiveCompletedManifest(method, coreDesire, totalCount) {
     localStorage.setItem('manifestHistoryLogs', JSON.stringify(history));
     localStorage.removeItem(`listData${method}`);
     
-    loadStats(); // Header counter update
+    loadStats(); 
+    addXP(25, "Manifestation Complete");
+    checkAllBadges();
     
     alert(`✨ Success! You completed ${totalCount} reps!`);
     renderManifestList(method);
@@ -770,14 +1204,13 @@ function loadManifestHistory() {
     if(!listArea) return;
     
     const history = JSON.parse(localStorage.getItem('manifestHistoryLogs') || '[]');
-    
     if (history.length > 0) {
         if(box) box.style.display = 'block';
         listArea.innerHTML = '';
-        
         [...history].reverse().forEach((log, index) => {
             const div = document.createElement('div');
-            div.className = 'history-item';
+            div.className = 'history-item animate-item';
+            div.style.animationDelay = `${index * 0.05}s`;
             div.style.borderLeft = "4px solid #38bdf8";
             div.style.marginBottom = "10px";
             div.innerHTML = `
@@ -790,7 +1223,7 @@ function loadManifestHistory() {
                     <span style="font-size:0.75rem; background:rgba(56,189,248,0.1); padding:4px 8px; border-radius:10px; color:#38bdf8; font-weight:700;">
                         ${log.reps} Repetitions
                     </span>
-                    <button onclick="deleteHistoryItem(${history.length - 1 - index})" style="background:var(--icon-bg); border:1px solid var(--card-border); color:var(--danger); padding:4px 10px; border-radius:8px; cursor:pointer; font-size:0.75rem; font-weight:700;">Delete</button>
+                    <button class="hover-bounce" onclick="deleteHistoryItem(${history.length - 1 - index})" style="background:var(--icon-bg); border:1px solid var(--card-border); color:var(--danger); padding:4px 10px; border-radius:8px; cursor:pointer; font-size:0.75rem; font-weight:700;">Delete</button>
                 </div>
             `;
             listArea.appendChild(div);
@@ -807,7 +1240,7 @@ function deleteHistoryItem(index) {
         history.splice(index, 1);
         localStorage.setItem('manifestHistoryLogs', JSON.stringify(history));
         loadManifestHistory();
-        loadStats(); // Update header
+        loadStats(); 
     }
 }
 
@@ -819,8 +1252,6 @@ function toggleTheme() {
     document.getElementById('themeToggle').innerText = document.body.classList.contains('light-mode') ? '🌙' : '☀️';
 }
 function toggleReminder() { alert("🔔 Reminders active!"); }
-
 function openAffirmationVault() { document.getElementById('affirmationVault').classList.add('active'); }
 function closeAffirmationVault() { document.getElementById('affirmationVault').classList.remove('active'); }
 function scrollToCategory(id) { document.getElementById('affModalBody').scrollTo({ top: document.getElementById(id).offsetTop - 20, behavior: 'smooth' }); }
-function copyQuickAff(el) { navigator.clipboard.writeText(el.innerText); alert("✨ Copied!"); }
